@@ -17,23 +17,27 @@ class Pulp:
         ### Function to generate a site map on crawled urls ###
         print("Creating xml...")
 
+        site_map = []
+
+        image_site_map = []
+
         req = requests.get(self.url)
 
         soup = BeautifulSoup(req.content, 'html.parser')
 
         all_links = soup.find_all('a')
-        site_map = []
 
         for link in all_links:
 
             # Check if its a relative link
             if self.url not in link['href'] and '#' not in link['href']:
-
-                link['href'] = "{}/{}".format(str(self.url).rstrip("/"),link['href'])
+                link['href'] = "{}/{}".format(str(self.url).rstrip("/"), link['href'])
 
             if self.url in link['href'] and link['href']:
 
                 site_map.append(link['href'])
+                if ".jpg" in link['href']:
+                    image_site_map.append(link['href'])
 
                 if self.url in link['href']:
 
@@ -44,8 +48,11 @@ class Pulp:
                     for mlinks in more_links:
 
                         try:
-                            if self.url in mlinks['href'] :
+                            if self.url in mlinks['href']:
                                 site_map.append(mlinks['href'])
+
+                            if ".jpg" in mlinks['href']:
+                                image_site_map.append(mlinks['href'])
 
                         except Exception as e:
                             print(str(e))
@@ -57,43 +64,49 @@ class Pulp:
             if "http" in m and "#" not in m and m not in clean_links:
                 clean_links.append(m)
 
-        start_str = '<?xml version="1.0" encoding="UTF-8"?>\r<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\r'
-        end_str = '\r</urlset>'
+        index = 0
 
-        today = date.today()
+        # Include image site map
+        for file_type, data_links in {'site_map':clean_links, 'image_site_map':image_site_map}.items():
 
-        # Unix file system / but windows \
-        f = open("sitemaps/{}_sitemap.xml".format(str(self.site_name)), mode="w")
+            index = index + 1
+            start_str = '<?xml version="1.0" encoding="UTF-8"?>\r<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\r'
+            end_str = '\r</urlset>'
 
-        f.write(start_str)
-        i = 1
+            today = date.today()
 
-        for each_url in clean_links:
+            # Unix file system / but windows \
+            f = open("sitemaps/{}_{}.xml".format(str(self.site_name),file_type), mode="w")
 
-            priority = self.calculate_priority(each_url)
+            f.write(start_str)
+            i = 1
 
-            if priority > 0.8:
-                changefreq = 'weekly'
+            for each_url in data_links:
 
-            elif priority > 0.5 and priority <= 0.8:
-                changefreq = 'monthly'
+                priority = self.calculate_priority(each_url)
 
-            else:
-                changefreq = 'yearly'
+                if priority > 0.8:
+                    changefreq = 'weekly'
 
-            # Site map url object
-            f.write("""
-            <url>
-              <loc>{}</loc>
-              <lastmod>{}</lastmod>
-              <changefreq>{}</changefreq>
-              <priority>{}</priority>
-            </url>""".format(str(each_url), str(today), changefreq, priority))
+                elif priority > 0.5 and priority <= 0.8:
+                    changefreq = 'monthly'
 
-            i = i + 1
-        f.write(end_str)
+                else:
+                    changefreq = 'yearly'
 
-        f.close()
+                # Site map url object
+                f.write("""
+                <url>
+                  <loc>{}</loc>
+                  <lastmod>{}</lastmod>
+                  <changefreq>{}</changefreq>
+                  <priority>{}</priority>
+                </url>""".format(str(each_url), str(today), changefreq, priority))
+
+                i = i + 1
+            f.write(end_str)
+
+            f.close()
 
     @staticmethod
     def calculate_priority(search_url):

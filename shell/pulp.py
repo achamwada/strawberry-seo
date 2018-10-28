@@ -26,11 +26,16 @@ class Pulp:
 
         for link in all_links:
 
-            if 'http' in link['href'] and link['href']:
+            # Check if its a relative link
+            if self.url not in link['href'] and '#' not in link['href']:
+
+                link['href'] = "{}/{}".format(str(self.url).rstrip("/"),link['href'])
+
+            if self.url in link['href'] and link['href']:
 
                 site_map.append(link['href'])
 
-                if 'http' in link['href']:
+                if self.url in link['href']:
 
                     more_content = requests.get(link['href'])
                     more_soup = BeautifulSoup(more_content.content, 'html.parser')
@@ -39,8 +44,8 @@ class Pulp:
                     for mlinks in more_links:
 
                         try:
-                            # print(mlinks['href'])
-                            site_map.append(mlinks['href'])
+                            if self.url in mlinks['href'] :
+                                site_map.append(mlinks['href'])
 
                         except Exception as e:
                             print(str(e))
